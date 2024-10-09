@@ -23,12 +23,46 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+
+        // $table->id();
+        // $table->string('user_code')->unique();
+
+        // $table->string('first_name');
+        // $table->string('last_name');
+        // $table->string('username')->unique();
+        // $table->string('avatar')->nullable();
+        // $table->string('address')->nullable();
+        // $table->string('city')->nullable();
+        // $table->string('state')->nullable();
+        // $table->string('zip')->nullable();
+        // $table->string('country')->nullable();
+        // $table->string('phone')->nullable();
+        // $table->string('gender')->nullable();
+        // $table->string('email')->unique();
+        // $table->string('status')->default('pending');
+        // $table->string('deleted_by')->nullable();
+        // $table->timestamp('email_verified_at')->nullable();
+        // $table->string('password');
+        // $table->rememberToken();
+        // $table->timestamps();
+        // $table->softDeletes();
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'user_code' => Str::uuid(),
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'username' => $this->faker->unique()->userName,
+            'avatar' => "avatars/1728497996.svg",
+            'address' => $this->faker->address,
+            'city' => $this->faker->city,
+            'state' => $this->faker->state,
+            'zip' => $this->faker->postcode,
+            'country' => $this->faker->country, 
+            'phone' => $this->faker->phoneNumber,
+            'gender' => $this->faker->randomElement(['male', 'female']),
+            'email' => $this->faker->unique()->safeEmail,
+            'status' => $this->faker->randomElement(['active', 'inactive']),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'password' => Hash::make('password'),
         ];
     }
 

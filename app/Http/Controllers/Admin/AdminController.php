@@ -6,38 +6,49 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Admin/index');
+        $pageSize = $request->input('perPage', 10);
+        $search = $request->input('search', '');
+
+        $users = User::query()
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->paginate($pageSize);
+
+        return Inertia::render('Admin/Users/index', [
+            'users' => $users->items(),
+            'total' => $users->total(),
+            'currentPage' => $users->currentPage(),
+            'pageSize' => $pageSize,
+            'lastPage' => $users->lastPage(),
+        ]);
     }
 
     public function users(Request $request)
     {
-        $query = User::query();
+        $pageSize = $request->input('pageSize', 10);
+        $page = $request->input('page', 1);
 
-        // Apply search filter if provided
-        if ($request->has('search')) {
-            $searchTerm = $request->input('search');
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('username', 'like', "%{$searchTerm}%")
-                    ->orWhere('email', 'like', "%{$searchTerm}%")
-                    ->orWhere('user_code', 'like', "%{$searchTerm}%")
-                    ->orWhere('first_name', 'like', "%{$searchTerm}%")
-                    ->orWhere('last_name', 'like', "%{$searchTerm}%");
-            });
-        }
+       
 
-        $users = $query->paginate(10)->map(function ($user) {
-            $user->avatar = $user->avatar ? Storage::url($user->avatar) : null;
-            return $user;
-        });
+        $users = User::query()
+            ->paginate($pageSize, ['*'], 'page', $page);
 
-        $message = session('success');
-        return Inertia::render('Admin/Users/index', compact('users', 'message'));
+            
+
+        return Inertia::render('Admin/Users/index', [
+            'users' => $users->items(),
+            'total' => $users->total(),
+            'currentPage' => $users->currentPage(),
+            'pageSize' => $pageSize,
+            'lastPage' => $users->lastPage(),
+        ]);
     }
 
     public function createUser()

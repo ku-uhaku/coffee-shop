@@ -14,9 +14,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-
         User::factory()->create([
-            'name' => 'Admin',
+
             'first_name' => 'Admin',
             'last_name' => 'Admin',
             'username' => 'admin',
@@ -35,5 +34,10 @@ class DatabaseSeeder extends Seeder
             'remember_token' => Str::random(10),
 
         ]);
+
+        User::factory()->count(100)->create();
+
+
+        
     }
 }
