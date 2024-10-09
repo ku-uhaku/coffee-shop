@@ -15,12 +15,27 @@ class AdminController extends Controller
         return Inertia::render('Admin/index');
     }
 
-    public function users()
+    public function users(Request $request)
     {
-        $users = User::all()->map(function ($user) {
+        $query = User::query();
+
+        // Apply search filter if provided
+        if ($request->has('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('username', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%")
+                    ->orWhere('user_code', 'like', "%{$searchTerm}%")
+                    ->orWhere('first_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $users = $query->paginate(10)->map(function ($user) {
             $user->avatar = $user->avatar ? Storage::url($user->avatar) : null;
             return $user;
         });
+
         $message = session('success');
         return Inertia::render('Admin/Users/index', compact('users', 'message'));
     }
