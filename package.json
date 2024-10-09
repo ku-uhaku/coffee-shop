@@ -20,7 +20,10 @@
         "vite": "^5.0"
     },
     "dependencies": {
+        "@fontsource/poppins": "^5.1.0",
         "@hookform/resolvers": "^3.9.0",
+        "filepond": "^4.31.4",
+        "react-filepond": "^7.1.2",
         "react-hook-form": "^7.53.0",
         "zod": "^3.23.8"
     }

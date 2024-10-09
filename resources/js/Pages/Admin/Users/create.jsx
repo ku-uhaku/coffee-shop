@@ -4,6 +4,8 @@ import { useState } from "react"
 import TextInput from "@/Components/TextInput"
 import InputLabel from "@/Components/InputLabel"
 import { Tabs, Tab } from "@/Components/Tabs"
+import BtnLoading from "@/Components/BtnLoading"
+import ImageDrop from "@/Components/ImageDrop"
 import { z } from "zod"
 
 // Define schema using Zod
@@ -23,48 +25,46 @@ const userSchema = z.object({
 })
 
 export default function CreateUsers() {
-	const [previewImage, setPreviewImage] = useState(null)
 	const [activeTab, setActiveTab] = useState(0)
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const { data, setData, post, errors } = useForm({
 		avatar: null,
 		username: "",
 		usercode: "",
 		firstName: "",
-		lastName: "",
+		lastName: "", 
 		phone: "",
 		gender: "",
 		email: "",
 		password: "",
-		confirmPassword: "",
+			confirmPassword: "",
 		address: "",
 		city: "",
 	})
 
-	const handleImageChange = (e) => {
-		const file = e.target.files[0]
-		setData("avatar", file)
-
-		if (file) {
-			const reader = new FileReader()
-			reader.onloadend = () => {
-				setPreviewImage(reader.result)
-			}
-			reader.readAsDataURL(file)
-		}
+	const handleImageChange = (file) => {
+		setData("avatar", file);
 	}
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault()
+		setIsSubmitting(true)
 		try {
-			userSchema.parse(data) // Validate data using Zod schema
+			// userSchema.parse(data) // Validate data using Zod schema
+			
+			// Simulate an API call
+			await new Promise(resolve => setTimeout(resolve, 7000));
 
 			console.log(data)
+			// Handle successful submission here
 		} catch (err) {
 			if (err instanceof z.ZodError) {
 				// Handle Zod validation errors
 				console.log(err.errors)
 			}
+		} finally {
+			setIsSubmitting(false)
 		}
 	}
 
@@ -80,34 +80,7 @@ export default function CreateUsers() {
 							<form onSubmit={handleSubmit} className="flex w-full">
 								<div className="w-1/3 pr-4">
 									<div className="mb-4">
-										<label
-											htmlFor="avatar"
-											className="block mb-2 text-sm font-medium text-gray-700"
-										>
-											Avatar
-										</label>
-										<input
-											type="file"
-											id="avatar"
-											name="avatar"
-											accept="image/*"
-											className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-											onChange={handleImageChange}
-										/>
-									</div>
-									<div className="mt-2">
-										<div className="flex items-center justify-center w-full h-64 bg-gray-100 border-2 border-gray-300 border-dashed rounded-lg">
-											{previewImage ? (
-												<img
-													src={previewImage}
-													alt="Preview"
-													style={{ objectFit: "contain" }}
-													className="object-cover w-full h-full rounded-lg"
-												/>
-											) : (
-												<span className="text-gray-500">Image preview</span>
-											)}
-										</div>
+										<ImageDrop onImageChange={handleImageChange} />
 									</div>
 								</div>
 
@@ -162,12 +135,14 @@ export default function CreateUsers() {
 									</Tabs>
 
 									<div className="mt-4">
-										<button
+										<BtnLoading
 											type="submit"
 											className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+											loading={isSubmitting}
+											
 										>
 											Create User
-										</button>
+										</BtnLoading>
 									</div>
 								</div>
 							</form>
