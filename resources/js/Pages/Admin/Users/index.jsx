@@ -13,14 +13,27 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		{
 			header: 'Username',
 			accessorKey: 'username',
+			id: 'Username',
 		},
 		{
 			header: 'Email',
 			accessorKey: 'email',
+			id: 'Email',
 		},
 		{
-			header: 'Name',
+			header: 'First Name',
+			accessorKey: 'first_name',
+			id: 'First Name',
+		},
+		{
+			header: 'Last Name',
+			accessorKey: 'last_name',
+			id: 'Last Name',
+		},
+		{
+			header: 'Full Name',
 			accessorFn: row => `${row.first_name} ${row.last_name}`,
+			id: 'Full Name',
 		},
 		// Add more columns as needed	
 	];
@@ -64,7 +77,7 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 			<Head title="Users" />
 			<div className="py-12">
 				<div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-					<div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+					<div className="bg-white  shadow-sm sm:rounded-lg">
 						<div className="p-6 text-gray-900">
 							<h2 className="text-2xl font-semibold mb-4">Users List</h2>
 							<div className="mb-4">

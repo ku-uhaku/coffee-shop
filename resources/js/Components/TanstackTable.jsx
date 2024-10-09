@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     useReactTable,
     getCoreRowModel,
     flexRender,
 } from "@tanstack/react-table";
+import Dropdown from '@/Components/Dropdown';
 
 export default function TanstackTable({
     data,
@@ -15,6 +16,9 @@ export default function TanstackTable({
     onPageSizeChange,
     total,
 }) {
+    const [columnVisibility, setColumnVisibility] = useState({});
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
     const table = useReactTable({
         data,
         columns,
@@ -24,6 +28,7 @@ export default function TanstackTable({
                 pageIndex,
                 pageSize,
             },
+            columnVisibility,
         },
         onPaginationChange: (updater) => {
             if (typeof updater === "function") {
@@ -36,12 +41,40 @@ export default function TanstackTable({
                 }
             }
         },
+        onColumnVisibilityChange: setColumnVisibility,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,
     });
 
     return (
         <div className="overflow-x-auto">
+            <div className=" flex justify-end mb-4 relative">
+                <Dropdown>
+                    <Dropdown.Trigger>
+                        <button
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 "
+                        >
+                            Toggle Columns
+                        </button>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content align="right" width="48">
+                        {table.getAllLeafColumns().map(column => (
+                            <div key={column.id} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                <label className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={column.getIsVisible()}
+                                        onChange={column.getToggleVisibilityHandler()}
+                                        className="mr-2"
+                                    />
+                                    {column.id}
+                                </label>
+                            </div>
+                        ))}
+                    </Dropdown.Content>
+                </Dropdown>
+            </div>
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -199,4 +232,3 @@ export default function TanstackTable({
         </div>
     );
 }
-//
