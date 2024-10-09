@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -16,8 +17,12 @@ class AdminController extends Controller
 
     public function users()
     {
-        $users = User::all();
-        return Inertia::render('Admin/Users/index', compact('users'));
+        $users = User::all()->map(function ($user) {
+            $user->avatar = $user->avatar ? Storage::url($user->avatar) : null;
+            return $user;
+        });
+        $message = session('success');
+        return Inertia::render('Admin/Users/index', compact('users', 'message'));
     }
 
     public function createUser()

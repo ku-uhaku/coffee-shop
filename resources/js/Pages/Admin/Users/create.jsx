@@ -44,7 +44,6 @@ export default function CreateUsers() {
 	} = useForm({
 		resolver: zodResolver(userSchema),
 		defaultValues: {
-			avatar: "",
 			username: "username",
 			user_code: "user_code",
 			first_name: "firstName",
