@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import AdminLayout from "@/Layouts/AdminLayout";
 import { Head, router } from "@inertiajs/react";
 import TanstackTable from '@/Components/TanstackTable';
+import debounce from 'lodash/debounce';
 
-export default function Index({ users, total, currentPage, pageSize, lastPage }) {
+export default function Index({ users, total, currentPage, pageSize, lastPage, search }) {
 	const [page, setPage] = useState(currentPage);
 	const [itemsPerPage, setItemsPerPage] = useState(pageSize);
+	const [searchTerm, setSearchTerm] = useState(search);
 
 	const columns = [
 		{
@@ -20,47 +22,74 @@ export default function Index({ users, total, currentPage, pageSize, lastPage })
 			header: 'Name',
 			accessorFn: row => `${row.first_name} ${row.last_name}`,
 		},
-		// Add more columns as needed
+		// Add more columns as needed	
 	];
 
 	const handlePageChange = (newPage) => {
 		setPage(newPage);
-		router.get(route('admin.users'), { page: newPage, pageSize: itemsPerPage }, {
-			preserveState: true,
-			preserveScroll: true,
-		});
+		updateUsers(newPage, itemsPerPage, searchTerm);
 	};
 
 	const handlePageSizeChange = (newPageSize) => {
 		setItemsPerPage(newPageSize);
-		router.get(route('admin.users'), { page: 1, pageSize: newPageSize }, {
-			preserveState: true,
-			preserveScroll: true,
-		});
+		updateUsers(1, newPageSize, searchTerm);
+	};
+
+	const debouncedSearch = useCallback(
+		debounce((value) => {
+			updateUsers(1, itemsPerPage, value);
+		}, 300),
+		[itemsPerPage]
+	);
+
+	const handleSearchChange = (e) => {
+		const value = e.target.value;
+		setSearchTerm(value);
+		debouncedSearch(value);
+	};
+
+	const updateUsers = (page, pageSize, search) => {
+		router.get(
+			route('admin.users'),
+			{ page, pageSize, search },
+			{
+				preserveState: true,
+				preserveScroll: true,
+			}
+		);
 	};
 
 	return (
 		<AdminLayout header="Users">
 			<Head title="Users" />
-				<div className="py-12">
-					<div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-						<div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-							<div className="p-6 text-gray-900">
-								<h2 className="text-2xl font-semibold mb-4">Users List</h2>
-				<TanstackTable
-									data={users}
-					columns={columns}
-					pageCount={lastPage}
-									pageIndex={page - 1}
-									pageSize={itemsPerPage}
-					onPageChange={handlePageChange}
-					onPageSizeChange={handlePageSizeChange}
-					total={total}
-				/>
-			</div>
+			<div className="py-12">
+				<div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+					<div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+						<div className="p-6 text-gray-900">
+							<h2 className="text-2xl font-semibold mb-4">Users List</h2>
+							<div className="mb-4">
+								<input
+									type="text"
+									placeholder="Search users..."
+									value={searchTerm}
+									onChange={handleSearchChange}
+									className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+							<TanstackTable
+								data={users}
+								columns={columns}
+								pageCount={lastPage}
+								pageIndex={page - 1}
+								pageSize={itemsPerPage}
+								onPageChange={handlePageChange}
+								onPageSizeChange={handlePageSizeChange}
+								total={total}
+							/>
 						</div>
 					</div>
 				</div>
+			</div>
 		</AdminLayout>
 	);
 }

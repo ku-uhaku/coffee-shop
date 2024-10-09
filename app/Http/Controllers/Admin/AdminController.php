@@ -34,13 +34,16 @@ class AdminController extends Controller
     {
         $pageSize = $request->input('pageSize', 10);
         $page = $request->input('page', 1);
-
-       
+        $search = $request->input('search', '');
 
         $users = User::query()
+            ->when($search, function ($query, $search) {
+                return $query->where('username', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%")
+                             ->orWhere('first_name', 'like', "%{$search}%")
+                             ->orWhere('last_name', 'like', "%{$search}%");
+            })
             ->paginate($pageSize, ['*'], 'page', $page);
-
-            
 
         return Inertia::render('Admin/Users/index', [
             'users' => $users->items(),
@@ -48,6 +51,7 @@ class AdminController extends Controller
             'currentPage' => $users->currentPage(),
             'pageSize' => $pageSize,
             'lastPage' => $users->lastPage(),
+            'search' => $search,
         ]);
     }
 

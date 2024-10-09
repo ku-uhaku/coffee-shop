@@ -13,7 +13,6 @@ export default function TanstackTable({
     pageSize,
     onPageChange,
     onPageSizeChange,
-    onSearch,
     total,
 }) {
     const table = useReactTable({
@@ -43,14 +42,6 @@ export default function TanstackTable({
 
     return (
         <div className="overflow-x-auto">
-            <div className="mb-4">
-                <input
-                    type="text"
-                    placeholder="Search..."
-                    onChange={(e) => onSearch(e.target.value)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                />
-            </div>
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     {table.getHeaderGroups().map((headerGroup) => (
