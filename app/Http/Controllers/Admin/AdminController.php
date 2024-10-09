@@ -34,11 +34,11 @@ class AdminController extends Controller
             $filename = $timestamp . '.' . $extension;
             $avatarPath = $avatar->storeAs('avatars', $filename, 'public');
         } else {
-            $avatarPath = null;
+            $avatarPath = 'avatars/default/' . $request->gender . '.png';
         }
 
         $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'avatar' => ['image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
             'username' => ['required', 'max:50'],
             'user_code' => ['required', 'max:50'],
             'first_name' => ['required', 'max:50'],
@@ -64,6 +64,6 @@ class AdminController extends Controller
         $user->city = $request->city;
         $user->save();
 
-        return to_route('admin.users');
+        return to_route('admin.users')->with('success', 'User created successfully');
     }
 }

@@ -1,5 +1,5 @@
 import AdminLayout from "@/Layouts/AdminLayout"
-import { Head } from "@inertiajs/react"
+import { Head, usePage } from "@inertiajs/react"
 
 function Admin() {
 	return (
