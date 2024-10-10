@@ -7,10 +7,11 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
-    
+
 
     public function users(Request $request)
     {
@@ -18,32 +19,55 @@ class UserController extends Controller
         $page = $request->input('page', 1);
         $search = $request->input('search', '');
         $sort = json_decode($request->input('sort', '[]'), true);
+        $authUser = Auth::user();
 
-        $query = User::query()
-            ->when($search, function ($query, $search) {
-                return $query->where('username', 'like', "%{$search}%")
-                             ->orWhere('email', 'like', "%{$search}%")
-                             ->orWhere('first_name', 'like', "%{$search}%")
-                             ->orWhere('last_name', 'like', "%{$search}%")
-                             ->orWhere('status', 'like', "%{$search}%");
-            });
+        $cacheKey = "users_page_{$page}_size_{$pageSize}_search_{$search}_sort_" . md5(json_encode($sort));
 
-        if (!empty($sort)) {
-            foreach ($sort as $sortItem) {
-                $query->orderBy($sortItem['id'], $sortItem['desc'] ? 'desc' : 'asc');
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($pageSize, $page, $search, $sort, $authUser) {
+            $allUsers = User::count();
+
+            $query = User::query()
+                ->when($search, function ($query, $search) {
+                    return $query->where('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%");
+                });
+
+            if (!empty($sort)) {
+                foreach ($sort as $sortItem) {
+                    $query->orderBy($sortItem['id'], $sortItem['desc'] ? 'desc' : 'asc');
+                }
             }
-        }
 
-        $users = $query->paginate($pageSize, ['*'], 'page', $page);
-        return Inertia::render('Admin/Users/index', [
-            'users' => $users->items(),
-            'total' => $users->total(),
-            'currentPage' => $users->currentPage(),
+            $users = $query->paginate($pageSize, ['*'], 'page', $page);
+            $userItems = $users->items();
+
+            // Move the authenticated user to the beginning of the list
+            if ($authUser) {
+                $authUserKey = array_search($authUser->id, array_column($userItems, 'id'));
+                if ($authUserKey !== false) {
+                    $authUserItem = $userItems[$authUserKey];
+                    unset($userItems[$authUserKey]);
+                    array_unshift($userItems, $authUserItem);
+                }
+            }
+
+            return [
+                'users' => $userItems,
+                'allUsers' => $allUsers,
+                'total' => $users->total(),
+                'currentPage' => $users->currentPage(),
+                'lastPage' => $users->lastPage(),
+            ];
+        });
+
+        return Inertia::render('Admin/Users/index', array_merge($data, [
             'pageSize' => $pageSize,
-            'lastPage' => $users->lastPage(),
             'search' => $search,
             'sort' => $sort,
-        ]);
+        ]));
     }
 
     public function createUser()
@@ -90,27 +114,25 @@ class UserController extends Controller
         $user->city = $request->city;
         $user->save();
 
-        if($user){
+        if ($user) {
             return to_route('admin.users')->with('success', 'User created successfully');
-        }else{
+        } else {
             return to_route('admin.users')->with('error', 'User created failed');
         }
-
-    
     }
 
     public function bulkDeleteUsers(Request $request)
-    {   
-     
+    {
+
         $ids = $request->input('ids', []);
 
-        if (in_array(auth()->id(), $ids)) {
+        if (in_array(Auth::user()->id, $ids)) {
             return back()->with('error', 'You cannot delete your own account');
         }
         $deletedCount = User::whereIn('id', $ids)->delete();
-        if($deletedCount){
+        if ($deletedCount) {
             return back()->with('success', $deletedCount . ' users deleted successfully');
-        }else{
+        } else {
             return back()->with('error', 'Users deleted failed');
         }
     }
@@ -120,26 +142,25 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $user->status = $request->input('status');
         $user->save();
-        if($user){
+        if ($user) {
             return back()->with('success', 'User status updated successfully ' . $user->status);
-        }else{
+        } else {
             return back()->with('error', 'User status updated failed');
         }
-
     }
 
     public function deleteUser($id)
     {
         $user = User::findOrFail($id);
 
-        if ($user->id === auth()->id()) {
-            
+        if ($user->id === Auth::user()->id) {
+
             return back()->with('error', 'You cannot delete your own account');
         }
         $user->delete();
-        if($user){
+        if ($user) {
             return back()->with('success', 'User deleted successfully');
-        }else{
+        } else {
             return back()->with('error', 'User deleted failed');
         }
     }
