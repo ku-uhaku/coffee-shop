@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -25,15 +25,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Admin
-    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
-    Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
-    Route::get('/admin/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
-    Route::post('/admin/users/store', [AdminController::class, 'storeUser'])->name('admin.users.store');
-    Route::post('/admin/users/edit/{id}', [AdminController::class, 'editUser'])->name('admin.users.edit');
-    Route::post('/admin/users/update/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
-    Route::delete('/admin/users/bulk-delete', [AdminController::class, 'bulkDeleteUsers'])->name('admin.users.bulkDelete');
-    Route::put('/admin/users/{id}/update-status', [AdminController::class, 'updateUserStatus'])->name('admin.users.updateStatus');
-    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+    // Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+    Route::get('/admin/users', [UserController::class, 'users'])->name('admin.users');
+    Route::get('/admin/users/create', [UserController::class, 'createUser'])->name('admin.users.create');
+    Route::post('/admin/users/store', [UserController::class, 'storeUser'])->name('admin.users.store');
+    Route::post('/admin/users/edit/{id}', [UserController::class, 'editUser'])->name('admin.users.edit');
+    Route::post('/admin/users/update/{id}', [UserController::class, 'updateUser'])->name('admin.users.update');
+    Route::delete('/admin/users/bulk-delete', [UserController::class, 'bulkDeleteUsers'])->name('admin.users.bulkDelete');
+    Route::put('/admin/users/{id}/update-status', [UserController::class, 'updateUserStatus'])->name('admin.users.updateStatus');
+    Route::delete('/admin/users/{id}', [UserController::class, 'deleteUser'])->name('admin.users.delete');
 });
 
 require __DIR__ . '/auth.php';

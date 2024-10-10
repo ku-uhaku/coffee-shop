@@ -1,14 +1,17 @@
-import AdminLayout from "@/Layouts/AdminLayout"
-import { Head, router } from "@inertiajs/react"
-import { useForm, Controller } from "react-hook-form"
-import { useState } from "react"
-import TextInput from "@/Components/TextInput"
-import InputLabel from "@/Components/InputLabel"
-import { Tabs, Tab } from "@/Components/Tabs"
 import BtnLoading from "@/Components/BtnLoading"
 import ImageDrop from "@/Components/ImageDrop"
-import { z } from "zod"
+import InputLabel from "@/Components/InputLabel"
+import ServerErrors from "@/Components/ServerErrors"
+import { Tab, Tabs } from "@/Components/Tabs"
+import TextInput from "@/Components/TextInput"
+import AdminLayout from "@/Layouts/AdminLayout"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Head, router , usePage} from "@inertiajs/react"
+import { useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { z } from "zod"
+
+
 
 const userSchema = z
 	.object({
@@ -34,7 +37,9 @@ const userSchema = z
 	})
 
 export default function CreateUsers() {
+	const { errors : serverErrors } = usePage().props
 	const [activeTab, setActiveTab] = useState(0)
+
 
 	const {
 		control,
@@ -87,6 +92,7 @@ export default function CreateUsers() {
 			<Head title="Create User" />
 			<div className="py-12">
 				<div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+					<ServerErrors errors={serverErrors} />
 					<div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
 						<div className="p-6 text-gray-900">
 							<h2 className="mb-4 text-2xl font-semibold">Create User</h2>

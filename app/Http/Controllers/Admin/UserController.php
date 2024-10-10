@@ -6,29 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
-class AdminController extends Controller
+class UserController extends Controller
 {
-    public function index(Request $request)
-    {
-        $pageSize = $request->input('perPage', 10);
-        $search = $request->input('search', '');
-
-        $users = User::query()
-            ->when($search, function ($query, $search) {
-                return $query->where('name', 'like', "%{$search}%")
-                             ->orWhere('email', 'like', "%{$search}%");
-            })
-            ->paginate($pageSize);
-
-        return Inertia::render('Admin/Users/index', [
-            'users' => $users->items(),
-            'total' => $users->total(),
-            'currentPage' => $users->currentPage(),
-            'pageSize' => $pageSize,
-            'lastPage' => $users->lastPage(),
-        ]);
-    }
+    
 
     public function users(Request $request)
     {
@@ -53,7 +35,6 @@ class AdminController extends Controller
         }
 
         $users = $query->paginate($pageSize, ['*'], 'page', $page);
-
         return Inertia::render('Admin/Users/index', [
             'users' => $users->items(),
             'total' => $users->total(),
@@ -109,15 +90,29 @@ class AdminController extends Controller
         $user->city = $request->city;
         $user->save();
 
-        return to_route('admin.users')->with('success', 'User created successfully');
+        if($user){
+            return to_route('admin.users')->with('success', 'User created successfully');
+        }else{
+            return to_route('admin.users')->with('error', 'User created failed');
+        }
+
+    
     }
 
     public function bulkDeleteUsers(Request $request)
     {   
+     
         $ids = $request->input('ids', []);
-        $deletedCount = User::whereIn('id', $ids)->delete();
 
-        return back()->with('success', $deletedCount . ' users deleted successfully');
+        if (in_array(auth()->id(), $ids)) {
+            return back()->with('error', 'You cannot delete your own account');
+        }
+        $deletedCount = User::whereIn('id', $ids)->delete();
+        if($deletedCount){
+            return back()->with('success', $deletedCount . ' users deleted successfully');
+        }else{
+            return back()->with('error', 'Users deleted failed');
+        }
     }
 
     public function updateUserStatus(Request $request, $id)
@@ -125,15 +120,27 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
         $user->status = $request->input('status');
         $user->save();
-        return back()->with('success', 'User status updated successfully');
+        if($user){
+            return back()->with('success', 'User status updated successfully ' . $user->status);
+        }else{
+            return back()->with('error', 'User status updated failed');
+        }
 
     }
 
     public function deleteUser($id)
     {
         $user = User::findOrFail($id);
-        $user->delete();
 
-        return back()->with('success', 'User deleted successfully');
+        if ($user->id === auth()->id()) {
+            
+            return back()->with('error', 'You cannot delete your own account');
+        }
+        $user->delete();
+        if($user){
+            return back()->with('success', 'User deleted successfully');
+        }else{
+            return back()->with('error', 'User deleted failed');
+        }
     }
 }

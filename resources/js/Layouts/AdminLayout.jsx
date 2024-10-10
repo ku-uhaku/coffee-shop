@@ -3,10 +3,22 @@ import Dropdown from "@/Components/Dropdown"
 import NavLink from "@/Components/NavLink"
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink"
 import { Link, usePage } from "@inertiajs/react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 export default function AdminLayout({ header, children }) {
 	const user = usePage().props.auth.user
+
+	const { flash } = usePage().props
+    useEffect(() => {
+        if (flash.success) {
+            toast.success(flash.success)
+        }
+
+        if (flash.error) {
+            toast.error(flash.error)
+        }
+    }, [flash.success, flash.error])
 
 	const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false)
 

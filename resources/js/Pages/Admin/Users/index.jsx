@@ -1,23 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from "@/Layouts/AdminLayout";
-import { Head, router } from "@inertiajs/react";
+import { Head, router, usePage } from "@inertiajs/react";
 import TanstackTable from '@/Components/TanstackTable';
 import { toast } from 'sonner';
 import Dropdown from '@/Components/Dropdown';
 import { FaChevronDown, FaEdit, FaTrash } from 'react-icons/fa';
 import change from '../../../../../public/sound/change.mp3';
+import deleteSound from '../../../../../public/sound/delete.mp3';
+import Modal from '@/Components/Modal';
 
-export default function Index({ users, total, currentPage, pageSize, lastPage, search, sort }) {
+export default function Index({ users, total, currentPage, pageSize, lastPage, search, sort, currentUserId }) {
 	const [page, setPage] = useState(currentPage);
 	const [itemsPerPage, setItemsPerPage] = useState(pageSize);
 	const [selectedRows, setSelectedRows] = useState({});
 	const [sorting, setSorting] = useState(sort || []);
 	const [searchTerm, setSearchTerm] = useState(search || "");
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [selectedUser, setSelectedUser] = useState(null);
+	const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+	const [selectedIdsForBulkDelete, setSelectedIdsForBulkDelete] = useState([]);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [userToDelete, setUserToDelete] = useState(null);
 
 	// Reset selected rows when page changes
 	useEffect(() => {
 		setSelectedRows({});
 	}, [page, itemsPerPage, searchTerm]);
+
 
 	const handleStatusChange = (userId, currentStatus) => {
 
@@ -28,25 +37,31 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 			preserveState: true,
 			preserveScroll: true,
 		});
-		if(newStatus === 'active'){
-			toast.success('User status updated to ' + newStatus)
-		}else{
-			toast.error('User status updated to ' + newStatus)
-		}
 		const audio = new Audio(change);
 		audio.play();
 
 	};
 
-	const handleDelete = (userId) => {
-		if (confirm('Are you sure you want to delete this user?')) {
-			router.delete(route('admin.users.delete', userId), {
-				preserveState: true,
-				preserveScroll: true,
-				onSuccess: () => toast.success('User deleted successfully'),
-				onError: () => toast.error('Failed to delete user'),
-			});
+	const handleDelete = (user) => {
+		if (user.id === currentUserId) {
+			return;
 		}
+		setUserToDelete(user);
+		setIsDeleteModalOpen(true);
+	};
+
+	const confirmDelete = () => {
+		
+	
+		router.delete(route('admin.users.delete', userToDelete.id), {
+			preserveState: true,
+			preserveScroll: true,
+			onSuccess: () => {
+				setIsDeleteModalOpen(false);
+				const audio = new Audio(deleteSound);
+		audio.play();
+			},
+		});
 	};
 
 	const columns = [
@@ -58,6 +73,13 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 			isToggleable: true,
 		},
 		{
+			header: 'Full Name',
+			accessorFn: row => `${row.first_name} ${row.last_name}`,
+			id: 'Full Name',
+			enableSorting: false,
+			isToggleable: true,
+		},
+		{
 			header: 'Email',
 			accessorKey: 'email',
 			id: 'Email',
@@ -65,26 +87,13 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 			isToggleable: true,
 		},
 		{
-			header: 'First Name',
-			accessorKey: 'first_name',
-			id: 'First Name',
+			header: 'Phone',
+			accessorKey: 'phone',
+			id: 'phone',
 			enableSorting: true,
 			isToggleable: true,
 		},
-		{
-			header: 'Last Name',
-			accessorKey: 'last_name',
-			id: 'Last Name',
-			enableSorting: true,
-			isToggleable: true,
-		},
-		{
-			header: 'Full Name',
-			accessorFn: row => `${row.first_name} ${row.last_name}`,
-			id: 'Full Name',
-			enableSorting: false,
-			isToggleable: true,
-		},
+	
 		{
 			header: 'Status',
 			accessorKey: 'status',
@@ -106,7 +115,7 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		{
 			header: 'Actions',
 			id: 'actions',
-			isToggleable: false, // Usually, we don't want to hide the actions column
+			isToggleable: false,
 			cell: ({ row }) => (
 				<Dropdown>
 					<Dropdown.Trigger>
@@ -125,14 +134,17 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 							>
 								<FaEdit className="inline mr-2" /> Edit
 							</Dropdown.Link>
-							<Dropdown.Link 
-								href="#" 
-								onClick={() => handleDelete(row.original.id)} 
-								as="button"
-								className="block px-4 py-2 text-sm text-red-600 hover:bg-red-100 hover:text-red-900"
+							<button 
+								onClick={() => handleDelete(row.original)} 
+								className={`block w-full text-left px-4 py-2 text-sm ${
+									row.original.id === currentUserId
+										? 'text-gray-400 cursor-not-allowed'
+										: 'text-red-600 hover:bg-red-100 hover:text-red-900'
+								}`}
+								disabled={row.original.id === currentUserId}
 							>
 								<FaTrash className="inline mr-2" /> Delete
-							</Dropdown.Link>
+							</button>
 						</div>
 					</Dropdown.Content>
 				</Dropdown>
@@ -173,16 +185,29 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 	};
 
 	const handleBulkDelete = (selectedIds) => {
-		if (confirm(`Are you sure you want to delete ${selectedIds.length} users?`)) {
-			router.delete(route('admin.users.bulkDelete'), {
-				data: { ids: selectedIds },
-				preserveState: true,
-				preserveScroll: true,
-				onSuccess: () => {
-					setSelectedRows({});
-				},
-			});
+		if (selectedIds.includes(currentUserId)) {
+			return;
 		}
+		setSelectedIdsForBulkDelete(selectedIds);
+		setIsBulkDeleteModalOpen(true);
+	};
+
+	const confirmBulkDelete = () => {
+		
+
+		router.delete(route('admin.users.bulkDelete'), {
+			data: { ids: selectedIdsForBulkDelete },
+			preserveState: true,
+			preserveScroll: true,
+			onSuccess: () => {
+				setSelectedRows({});
+				setIsBulkDeleteModalOpen(false);
+				const audio = new Audio(deleteSound);
+				audio.play();	
+			},
+			onError: () => {
+			},
+		});
 	};
 
 	const handleClearFilters = () => {
@@ -196,6 +221,11 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 			preserveState: false,
 			replace: true,
 		});
+	};
+
+	const handleModalOpen = (userId) => {
+		setSelectedUser(users.find(user => user.id === userId));
+		setIsModalOpen(true);
 	};
 
 	return (
@@ -228,6 +258,81 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 					</div>
 				</div>
 			</div>
+
+			<Modal
+				isOpen={isModalOpen}
+				onClose={() => setIsModalOpen(false)}
+				title="User Details"
+			>
+				{selectedUser && (
+					<div className="space-y-4">
+						<p><span className="font-semibold">Name:</span> {selectedUser.first_name} {selectedUser.last_name}</p>
+						<p><span className="font-semibold">Email:</span> {selectedUser.email}</p>
+						<p><span className="font-semibold">Username:</span> {selectedUser.username}</p>
+						<p><span className="font-semibold">Phone:</span> {selectedUser.phone}</p>
+						<p><span className="font-semibold">Status:</span> 
+							<span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+								selectedUser.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+							}`}>
+								{selectedUser.status.charAt(0).toUpperCase() + selectedUser.status.slice(1)}
+							</span>
+						</p>
+					</div>
+				)}
+			</Modal>
+			<Modal
+				isOpen={isBulkDeleteModalOpen}
+				onClose={() => setIsBulkDeleteModalOpen(false)}
+				title="Confirm Bulk Delete"
+				footer={
+					<div className="flex justify-end space-x-2">
+						<button
+							onClick={() => setIsBulkDeleteModalOpen(false)}
+							className="px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150"
+						>
+							Cancel
+						</button>
+						<button
+							onClick={confirmBulkDelete}
+							className="px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
+						>
+							Delete
+						</button>
+					</div>
+				}
+			>
+				<p className="text-sm text-gray-500">
+					Are you sure you want to delete {selectedIdsForBulkDelete.length} users? This action cannot be undone.
+				</p>
+			</Modal>
+			<Modal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				title="Confirm Delete"
+				footer={
+					<div className="flex justify-end space-x-2">
+						<button
+							onClick={() => {
+								setIsDeleteModalOpen(false);
+								setUserToDelete(null);
+							}}
+							className="px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150"
+						>
+							Cancel
+						</button>
+						<button
+							onClick={confirmDelete}
+							className="px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
+						>
+							Delete
+						</button>
+					</div>
+				}
+			>
+				<p className="text-sm text-gray-500">
+					Are you sure you want to delete the user "{userToDelete?.username}"? This action cannot be undone.
+				</p>
+			</Modal>
 		</AdminLayout>
 	);
 }
