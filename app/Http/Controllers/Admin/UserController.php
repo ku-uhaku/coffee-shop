@@ -21,47 +21,43 @@ class UserController extends Controller
         $sort = json_decode($request->input('sort', '[]'), true);
         $authUser = Auth::user();
 
-        $cacheKey = "users_page_{$page}_size_{$pageSize}_search_{$search}_sort_" . md5(json_encode($sort));
+        $allUsers = User::count();
 
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($pageSize, $page, $search, $sort, $authUser) {
-            $allUsers = User::count();
+        $query = User::query()
+            ->when($search, function ($query, $search) {
+                return $query->where('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
 
-            $query = User::query()
-                ->when($search, function ($query, $search) {
-                    return $query->where('username', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('status', 'like', "%{$search}%");
-                });
-
-            if (!empty($sort)) {
-                foreach ($sort as $sortItem) {
-                    $query->orderBy($sortItem['id'], $sortItem['desc'] ? 'desc' : 'asc');
-                }
+        if (!empty($sort)) {
+            foreach ($sort as $sortItem) {
+                $query->orderBy($sortItem['id'], $sortItem['desc'] ? 'desc' : 'asc');
             }
+        }
 
-            $users = $query->paginate($pageSize, ['*'], 'page', $page);
-            $userItems = $users->items();
+        $users = $query->paginate($pageSize, ['*'], 'page', $page);
+        $userItems = $users->items();
 
-            // Move the authenticated user to the beginning of the list
-            if ($authUser) {
-                $authUserKey = array_search($authUser->id, array_column($userItems, 'id'));
-                if ($authUserKey !== false) {
-                    $authUserItem = $userItems[$authUserKey];
-                    unset($userItems[$authUserKey]);
-                    array_unshift($userItems, $authUserItem);
-                }
+        // Move the authenticated user to the beginning of the list
+        if ($authUser) {
+            $authUserKey = array_search($authUser->id, array_column($userItems, 'id'));
+            if ($authUserKey !== false) {
+                $authUserItem = $userItems[$authUserKey];
+                unset($userItems[$authUserKey]);
+                array_unshift($userItems, $authUserItem);
             }
+        }
 
-            return [
-                'users' => $userItems,
-                'allUsers' => $allUsers,
-                'total' => $users->total(),
-                'currentPage' => $users->currentPage(),
-                'lastPage' => $users->lastPage(),
-            ];
-        });
+        $data = [
+            'users' => $userItems,
+            'allUsers' => $allUsers,
+            'total' => $users->total(),
+            'currentPage' => $users->currentPage(),
+            'lastPage' => $users->lastPage(),
+        ];
 
         return Inertia::render('Admin/Users/index', array_merge($data, [
             'pageSize' => $pageSize,
