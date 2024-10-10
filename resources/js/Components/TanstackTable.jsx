@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
     useReactTable,
     getCoreRowModel,
@@ -7,33 +7,10 @@ import {
 } from "@tanstack/react-table";
 import Dropdown from '@/Components/Dropdown';
 import { BsFunnel, BsSortDown, BsSortUp } from "react-icons/bs";
-import { MdDeleteOutline } from "react-icons/md";
-
-
-// Add these SVG icon components
-const SortIcon = () => (
-    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-    </svg>
-);
-
-const SortAscIcon = () => (
-    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-    </svg>
-);
-
-const SortDescIcon = () => (
-    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-    </svg>
-);
-
-const ChevronDownIcon = () => (
-    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-);
+import { MdDeleteOutline, MdFilterAltOff } from "react-icons/md";
+import { FaSearch } from "react-icons/fa";
+import { HiChevronLeft, HiChevronRight, HiChevronUpDown, HiChevronUp, HiChevronDown } from "react-icons/hi2";
+import debounce from 'lodash/debounce';
 
 export default function TanstackTable({
     data,
@@ -49,10 +26,14 @@ export default function TanstackTable({
     setSelectedRows,
     onSort,
     initialSorting = [],
+    onSearch,
+    initialSearchTerm = "",
+    onClearFilters,
 }) {
     const [columnVisibility, setColumnVisibility] = React.useState({});
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
     const [sorting, setSorting] = React.useState(initialSorting);
+    const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
 
     // Reset row selection when data changes
     useEffect(() => {
@@ -115,6 +96,19 @@ export default function TanstackTable({
         manualSorting: true,
     });
 
+    const debouncedSearch = React.useCallback(
+        debounce((value) => {
+            onSearch(value);
+        }, 300),
+        [onSearch]
+    );
+
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        debouncedSearch(value);
+    };
+
     const handleBulkAction = (action) => {
         const selectedIds = Object.keys(selectedRows).map(index => data[parseInt(index)].id);
         switch (action) {
@@ -131,60 +125,84 @@ export default function TanstackTable({
 
     const toggleableColumns = table.getAllLeafColumns().filter(column => column.columnDef.isToggleable);
 
+    const handleClearFilters = () => {
+        setSearchTerm("");
+        onClearFilters();
+    };
+
     return (
         <div className="overflow-x-auto">
-            <div className="flex justify-end mb-4 relative space-x-2">
-                <Dropdown>
-                    <Dropdown.Trigger>
-                        <button
-                            className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
-                        >
-                            Bulk Actions
-                            <ChevronDownIcon />
-                        </button>
-                    </Dropdown.Trigger>
-                    <Dropdown.Content align="left" width="48">
-                        <button
-                            onClick={() => isAnyRowSelected && handleBulkAction('delete')}
-                            className={`w-full text-left px-4 py-2 text-sm ${
-                                isAnyRowSelected 
-                                    ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' 
-                                    : 'text-gray-400 cursor-not-allowed'
-                            } flex items-center`}
-                        >
-                            <MdDeleteOutline className="mr-2" /> Delete Selected
-                        </button>
-                        {/* Add more bulk action options here */}
-                    </Dropdown.Content>
-                </Dropdown>
-                {toggleableColumns.length > 0 && (
+            <div className="flex justify-between mb-4 relative space-x-2">
+                <div className="relative flex-grow mr-2">
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={handleClearFilters}
+                        className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+                    >
+                        <MdFilterAltOff className="mr-2" />
+                        Clear Filters
+                    </button>
                     <Dropdown>
                         <Dropdown.Trigger>
                             <button
                                 className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
                             >
-                                <BsFunnel className="mr-2" />
-                                Toggle Columns
-                                <ChevronDownIcon />
+                                Bulk Actions
+                                <HiChevronDown className="w-4 h-4" />
                             </button>
                         </Dropdown.Trigger>
-                        <Dropdown.Content align="right" width="48">
-                            {toggleableColumns.map(column => (
-                                <div key={column.id} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={column.getIsVisible()}
-                                            onChange={column.getToggleVisibilityHandler()}
-                                            className="mr-2"
-                                        />
-                                        {column.columnDef.header}
-                                    </label>
-                                </div>
-                            ))}
+                        <Dropdown.Content align="left" width="48">
+                            <button
+                                onClick={() => isAnyRowSelected && handleBulkAction('delete')}
+                                className={`w-full text-left px-4 py-2 text-sm ${
+                                    isAnyRowSelected 
+                                        ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' 
+                                        : 'text-gray-400 cursor-not-allowed'
+                                } flex items-center`}
+                            >
+                                <MdDeleteOutline className="mr-2" /> Delete Selected
+                            </button>
+                            {/* Add more bulk action options here */}
                         </Dropdown.Content>
                     </Dropdown>
-                )}
+                    {toggleableColumns.length > 0 && (
+                        <Dropdown>
+                            <Dropdown.Trigger>
+                                <button
+                                    className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+                                >
+                                    <BsFunnel className="mr-2" />
+                                    Toggle Columns
+                                    <HiChevronDown className="w-4 h-4" />
+                                </button>
+                            </Dropdown.Trigger>
+                            <Dropdown.Content align="right" width="48">
+                                {toggleableColumns.map(column => (
+                                    <div key={column.id} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={column.getIsVisible()}
+                                                onChange={column.getToggleVisibilityHandler()}
+                                                className="mr-2"
+                                            />
+                                            {column.columnDef.header}
+                                        </label>
+                                    </div>
+                                ))}
+                            </Dropdown.Content>
+                        </Dropdown>
+                    )}
+                </div>
             </div>
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -204,9 +222,9 @@ export default function TanstackTable({
                                         {header.column.getCanSort() && (
                                             <span className="ml-1">
                                                 {{
-                                                    asc: <SortAscIcon />,
-                                                    desc: <SortDescIcon />,
-                                                }[header.column.getIsSorted()] ?? <SortIcon />}
+                                                    asc: <HiChevronUp className="w-4 h-4" />,
+                                                    desc: <HiChevronDown className="w-4 h-4" />,
+                                                }[header.column.getIsSorted()] ?? <HiChevronUpDown className="w-4 h-4" />}
                                             </span>
                                         )}
                                     </div>
@@ -233,123 +251,84 @@ export default function TanstackTable({
                     ))}
                 </tbody>
             </table>
-            <div className="py-3 flex items-center justify-between">
-                <div className="flex-1 flex justify-between sm:hidden">
-                    <button
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                <div className="flex items-center mb-4 sm:mb-0">
+                    <span className="text-sm text-gray-700 mr-2">Show</span>
+                    <select
+                        value={pageSize}
+                        onChange={(e) => {
+                            const newPageSize = Number(e.target.value);
+                            onPageChange(1);
+                            onPageSizeChange(newPageSize);
+                        }}
+                        className="mt-1 block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                     >
-                        Previous
-                    </button>
-                    <button
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                        Next
-                    </button>
+                        {[10, 20, 30, 40, 50, total].map((size) => (
+                            <option key={size} value={size}>
+                                {size === total ? `All` : size}
+                            </option>
+                        ))}
+                    </select>
+                    <span className="text-sm text-gray-700 ml-2">entries</span>
                 </div>
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
+                
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto">
+                    <div className="flex-shrink-0 mr-2 sm:mr-4">
                         <p className="text-sm text-gray-700">
-                            Showing{" "}
-                            <span className="font-medium">
-                                {pageIndex * pageSize + 1}
-                            </span>{" "}
-                            to{" "}
-                            <span className="font-medium">
-                                {Math.min((pageIndex + 1) * pageSize, total)}
-                            </span>{" "}
-                            of <span className="font-medium">{total}</span>{" "}
-                            results
+                            Showing <span className="font-medium">{pageIndex * pageSize + 1}</span> to{" "}
+                            <span className="font-medium">{Math.min((pageIndex + 1) * pageSize, total)}</span> of{" "}
+                            <span className="font-medium">{total}</span> results
                         </p>
                     </div>
-                    <div>
-                        <nav
-                            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                            aria-label="Pagination"
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <button
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <button
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                Previous
-                            </button>
+                            <span className="sr-only">Previous</span>
+                            <HiChevronLeft className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                        
+                        {/* Pagination buttons */}
+                        {(() => {
+                            const currentPage = table.getState().pagination.pageIndex;
+                            const pageCount = table.getPageCount();
+                            const visiblePages = 5;
+                            const halfVisible = Math.floor(visiblePages / 2);
 
-                            {(() => {
-                                const currentPage =
-                                    table.getState().pagination.pageIndex;
-                                const pageCount = table.getPageCount();
-                                const visiblePages = 5;
-                                const halfVisible = Math.floor(
-                                    visiblePages / 2
-                                );
+                            let startPage = Math.max(currentPage - halfVisible, 0);
+                            let endPage = Math.min(startPage + visiblePages - 1, pageCount - 1);
 
-                                let startPage = Math.max(
-                                    currentPage - halfVisible,
-                                    0
-                                );
-                                let endPage = Math.min(
-                                    startPage + visiblePages - 1,
-                                    pageCount - 1
-                                );
+                            if (endPage - startPage + 1 < visiblePages) {
+                                startPage = Math.max(endPage - visiblePages + 1, 0);
+                            }
 
-                                if (endPage - startPage + 1 < visiblePages) {
-                                    startPage = Math.max(
-                                        endPage - visiblePages + 1,
-                                        0
-                                    );
-                                }
-
-                                return Array.from(
-                                    { length: endPage - startPage + 1 },
-                                    (_, i) => startPage + i
-                                ).map((index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() =>
-                                            table.setPageIndex(index)
-                                        }
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                            currentPage === index
-                                                ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
-                                                : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        {index + 1}
-                                    </button>
-                                ));
-                            })()}
-                            <button
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                Next
-                            </button>
-                        </nav>
-                    </div>
+                            return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => table.setPageIndex(index)}
+                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                        currentPage === index
+                                            ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
+                                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    {index + 1}
+                                </button>
+                            ));
+                        })()}
+                        
+                        <button
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span className="sr-only">Next</span>
+                            <HiChevronRight className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                    </nav>
                 </div>
-            </div>
-            <div className="mt-2">
-                <select
-                    value={pageSize}
-                    onChange={(e) => {
-                        const newPageSize = Number(e.target.value);
-                        onPageChange(1);
-                        onPageSizeChange(newPageSize);
-                        // Reset to the first page when changing page size
-                    }}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                >
-                    {[10, 20, 30, 40, 50, total].map((size) => (
-                        <option key={size} value={size}>
-                            {size === total ? `Show all` : `Show ${size}`}
-                        </option>
-                    ))}
-                </select>
             </div>
         </div>
     );

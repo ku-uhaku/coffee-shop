@@ -1,18 +1,17 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from "@/Layouts/AdminLayout";
-import { Head, router, Link } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import TanstackTable from '@/Components/TanstackTable';
-import debounce from 'lodash/debounce';
 import { toast } from 'sonner';
 import Dropdown from '@/Components/Dropdown';
-import { FaChevronDown, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/fa';
+import { FaChevronDown, FaEdit, FaTrash } from 'react-icons/fa';
 
 export default function Index({ users, total, currentPage, pageSize, lastPage, search, sort }) {
 	const [page, setPage] = useState(currentPage);
 	const [itemsPerPage, setItemsPerPage] = useState(pageSize);
-	const [searchTerm, setSearchTerm] = useState(search);
 	const [selectedRows, setSelectedRows] = useState({});
 	const [sorting, setSorting] = useState(sort || []);
+	const [searchTerm, setSearchTerm] = useState(search || "");
 
 	// Reset selected rows when page changes
 	useEffect(() => {
@@ -149,17 +148,9 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		updateUsers(1, newPageSize, searchTerm, sorting);
 	};
 
-	const debouncedSearch = useCallback(
-		debounce((value) => {
-			updateUsers(1, itemsPerPage, value, sorting);
-		}, 300),
-		[itemsPerPage, sorting]
-	);
-
-	const handleSearchChange = (e) => {
-		const value = e.target.value;
+	const handleSearch = (value) => {
 		setSearchTerm(value);
-		debouncedSearch(value);
+		updateUsers(1, itemsPerPage, value, sorting);
 	};
 
 	const handleSort = (newSorting) => {
@@ -191,6 +182,19 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		}
 	};
 
+	const handleClearFilters = () => {
+		setSearchTerm('');
+		setSorting([]);
+		setPage(1);
+		setItemsPerPage(10); // Reset to default page size
+
+		// Use Inertia's visit method to replace the current URL without query parameters
+		router.visit(route('admin.users'), {
+			preserveState: false,
+			replace: true,
+		});
+	};
+
 	return (
 		<AdminLayout header="Users">
 			<Head title="Users" />
@@ -199,16 +203,6 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 					<div className="bg-white shadow-sm sm:rounded-lg">
 						<div className="p-6 text-gray-900">
 							<h2 className="text-2xl font-semibold mb-4">Users List</h2>
-							<div className="mb-4 relative">
-								<input
-									type="text"
-									placeholder="Search users..."
-									value={searchTerm}
-									onChange={handleSearchChange}
-									className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-								/>
-								<FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-							</div>
 							<TanstackTable
 								data={users}
 								columns={columns}
@@ -223,6 +217,9 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 								setSelectedRows={setSelectedRows}
 								onSort={handleSort}
 								initialSorting={sorting}
+								onSearch={handleSearch}
+								initialSearchTerm={searchTerm}
+								onClearFilters={handleClearFilters}
 							/>
 						</div>
 					</div>
