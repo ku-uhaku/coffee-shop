@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
     useReactTable,
     getCoreRowModel,
@@ -15,13 +15,40 @@ export default function TanstackTable({
     onPageChange,
     onPageSizeChange,
     total,
+    onBulkDelete,
+    selectedRows,
+    setSelectedRows,
 }) {
-    const [columnVisibility, setColumnVisibility] = useState({});
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [columnVisibility, setColumnVisibility] = React.useState({});
+    const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+
+    // Reset row selection when data changes
+    useEffect(() => {
+        setSelectedRows({});
+    }, [data, setSelectedRows]);
 
     const table = useReactTable({
         data,
-        columns,
+        columns: [
+            {
+                id: 'select',
+                header: ({ table }) => (
+                    <input
+                        type="checkbox"
+                        checked={table.getIsAllPageRowsSelected()}
+                        onChange={table.getToggleAllPageRowsSelectedHandler()}
+                    />
+                ),
+                cell: ({ row }) => (
+                    <input
+                        type="checkbox"
+                        checked={row.getIsSelected()}
+                        onChange={row.getToggleSelectedHandler()}
+                    />
+                ),
+            },
+            ...columns
+        ],
         pageCount,
         state: {
             pagination: {
@@ -29,6 +56,7 @@ export default function TanstackTable({
                 pageSize,
             },
             columnVisibility,
+            rowSelection: selectedRows,
         },
         onPaginationChange: (updater) => {
             if (typeof updater === "function") {
@@ -42,13 +70,26 @@ export default function TanstackTable({
             }
         },
         onColumnVisibilityChange: setColumnVisibility,
+        onRowSelectionChange: setSelectedRows,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,
     });
 
+    const handleBulkDelete = () => {
+        const selectedIds = Object.keys(selectedRows).map(index => data[parseInt(index)].id);
+        onBulkDelete(selectedIds);
+    };
+
     return (
         <div className="overflow-x-auto">
-            <div className=" flex justify-end mb-4 relative">
+            <div className="flex justify-between mb-4 relative">
+                <button
+                    onClick={handleBulkDelete}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    disabled={Object.keys(selectedRows).length === 0}
+                >
+                    Delete Selected
+                </button>
                 <Dropdown>
                     <Dropdown.Trigger>
                         <button

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import AdminLayout from "@/Layouts/AdminLayout";
 import { Head, router } from "@inertiajs/react";
 import TanstackTable from '@/Components/TanstackTable';
@@ -8,6 +8,12 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 	const [page, setPage] = useState(currentPage);
 	const [itemsPerPage, setItemsPerPage] = useState(pageSize);
 	const [searchTerm, setSearchTerm] = useState(search);
+	const [selectedRows, setSelectedRows] = useState({});
+
+	// Reset selected rows when page changes
+	useEffect(() => {
+		setSelectedRows({});
+	}, [page, itemsPerPage, searchTerm]);
 
 	const columns = [
 		{
@@ -72,6 +78,19 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		);
 	};
 
+	const handleBulkDelete = (selectedIds) => {
+		if (confirm(`Are you sure you want to delete ${selectedIds.length} users?`)) {
+			router.delete(route('admin.users.bulkDelete'), {
+				data: { ids: selectedIds },
+				preserveState: true,
+				preserveScroll: true,
+				onSuccess: () => {
+					setSelectedRows({});
+				},
+			});
+		}
+	};
+
 	return (
 		<AdminLayout header="Users">
 			<Head title="Users" />
@@ -98,6 +117,9 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 								onPageChange={handlePageChange}
 								onPageSizeChange={handlePageSizeChange}
 								total={total}
+								onBulkDelete={handleBulkDelete}
+								selectedRows={selectedRows}
+								setSelectedRows={setSelectedRows}
 							/>
 						</div>
 					</div>

@@ -101,4 +101,12 @@ class AdminController extends Controller
 
         return to_route('admin.users')->with('success', 'User created successfully');
     }
+
+    public function bulkDeleteUsers(Request $request)
+    {   
+        $ids = $request->input('ids', []);
+        $deletedCount = User::whereIn('id', $ids)->delete();
+
+        return back()->with('success', $deletedCount . ' users deleted successfully');
+    }
 }
