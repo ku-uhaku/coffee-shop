@@ -15,8 +15,8 @@ createInertiaApp({
 		const root = createRoot(el)
 
 		root.render(
-			<>
-				<Toaster richColors expand duration={3000} position="top-right" />
+				<>
+				<Toaster richColors expand position="top-right" duration={2000}  />
 				<App {...props} />
 			</>
 		)

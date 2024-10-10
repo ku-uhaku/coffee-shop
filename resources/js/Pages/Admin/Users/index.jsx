@@ -5,6 +5,7 @@ import TanstackTable from '@/Components/TanstackTable';
 import { toast } from 'sonner';
 import Dropdown from '@/Components/Dropdown';
 import { FaChevronDown, FaEdit, FaTrash } from 'react-icons/fa';
+import change from '../../../../../public/sound/change.mp3';
 
 export default function Index({ users, total, currentPage, pageSize, lastPage, search, sort }) {
 	const [page, setPage] = useState(currentPage);
@@ -32,6 +33,8 @@ export default function Index({ users, total, currentPage, pageSize, lastPage, s
 		}else{
 			toast.error('User status updated to ' + newStatus)
 		}
+		const audio = new Audio(change);
+		audio.play();
 
 	};
 
