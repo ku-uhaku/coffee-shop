@@ -29,7 +29,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/admin/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
     Route::post('/admin/users/store', [AdminController::class, 'storeUser'])->name('admin.users.store');
+    Route::post('/admin/users/edit/{id}', [AdminController::class, 'editUser'])->name('admin.users.edit');
+    Route::post('/admin/users/update/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/bulk-delete', [AdminController::class, 'bulkDeleteUsers'])->name('admin.users.bulkDelete');
+    Route::put('/admin/users/{id}/update-status', [AdminController::class, 'updateUserStatus'])->name('admin.users.updateStatus');
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
 });
 
 require __DIR__ . '/auth.php';

@@ -35,15 +35,24 @@ class AdminController extends Controller
         $pageSize = $request->input('pageSize', 10);
         $page = $request->input('page', 1);
         $search = $request->input('search', '');
+        $sort = json_decode($request->input('sort', '[]'), true);
 
-        $users = User::query()
+        $query = User::query()
             ->when($search, function ($query, $search) {
                 return $query->where('username', 'like', "%{$search}%")
                              ->orWhere('email', 'like', "%{$search}%")
                              ->orWhere('first_name', 'like', "%{$search}%")
-                             ->orWhere('last_name', 'like', "%{$search}%");
-            })
-            ->paginate($pageSize, ['*'], 'page', $page);
+                             ->orWhere('last_name', 'like', "%{$search}%")
+                             ->orWhere('status', 'like', "%{$search}%");
+            });
+
+        if (!empty($sort)) {
+            foreach ($sort as $sortItem) {
+                $query->orderBy($sortItem['id'], $sortItem['desc'] ? 'desc' : 'asc');
+            }
+        }
+
+        $users = $query->paginate($pageSize, ['*'], 'page', $page);
 
         return Inertia::render('Admin/Users/index', [
             'users' => $users->items(),
@@ -52,6 +61,7 @@ class AdminController extends Controller
             'pageSize' => $pageSize,
             'lastPage' => $users->lastPage(),
             'search' => $search,
+            'sort' => $sort,
         ]);
     }
 
@@ -108,5 +118,22 @@ class AdminController extends Controller
         $deletedCount = User::whereIn('id', $ids)->delete();
 
         return back()->with('success', $deletedCount . ' users deleted successfully');
+    }
+
+    public function updateUserStatus(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = $request->input('status');
+        $user->save();
+        return back()->with('success', 'User status updated successfully');
+
+    }
+
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return back()->with('success', 'User deleted successfully');
     }
 }

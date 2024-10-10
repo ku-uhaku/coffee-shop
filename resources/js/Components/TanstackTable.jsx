@@ -3,8 +3,37 @@ import {
     useReactTable,
     getCoreRowModel,
     flexRender,
+    getSortedRowModel,
 } from "@tanstack/react-table";
 import Dropdown from '@/Components/Dropdown';
+import { BsFunnel, BsSortDown, BsSortUp } from "react-icons/bs";
+import { MdDeleteOutline } from "react-icons/md";
+
+
+// Add these SVG icon components
+const SortIcon = () => (
+    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+    </svg>
+);
+
+const SortAscIcon = () => (
+    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+    </svg>
+);
+
+const SortDescIcon = () => (
+    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+    </svg>
+);
+
+const ChevronDownIcon = () => (
+    <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+);
 
 export default function TanstackTable({
     data,
@@ -18,9 +47,12 @@ export default function TanstackTable({
     onBulkDelete,
     selectedRows,
     setSelectedRows,
+    onSort,
+    initialSorting = [],
 }) {
     const [columnVisibility, setColumnVisibility] = React.useState({});
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+    const [sorting, setSorting] = React.useState(initialSorting);
 
     // Reset row selection when data changes
     useEffect(() => {
@@ -57,6 +89,7 @@ export default function TanstackTable({
             },
             columnVisibility,
             rowSelection: selectedRows,
+            sorting,
         },
         onPaginationChange: (updater) => {
             if (typeof updater === "function") {
@@ -71,50 +104,87 @@ export default function TanstackTable({
         },
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setSelectedRows,
+        onSortingChange: (updater) => {
+            const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+            setSorting(newSorting);
+            onSort(newSorting);
+        },
         getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
         manualPagination: true,
+        manualSorting: true,
     });
 
-    const handleBulkDelete = () => {
+    const handleBulkAction = (action) => {
         const selectedIds = Object.keys(selectedRows).map(index => data[parseInt(index)].id);
-        onBulkDelete(selectedIds);
+        switch (action) {
+            case 'delete':
+                onBulkDelete(selectedIds);
+                break;
+            // Add more cases for other bulk actions here
+            default:
+                console.log(`Bulk action ${action} not implemented`);
+        }
     };
+
+    const isAnyRowSelected = Object.keys(selectedRows).length > 0;
+
+    const toggleableColumns = table.getAllLeafColumns().filter(column => column.columnDef.isToggleable);
 
     return (
         <div className="overflow-x-auto">
-            <div className="flex justify-between mb-4 relative">
-                <button
-                    onClick={handleBulkDelete}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    disabled={Object.keys(selectedRows).length === 0}
-                >
-                    Delete Selected
-                </button>
+            <div className="flex justify-end mb-4 relative space-x-2">
                 <Dropdown>
                     <Dropdown.Trigger>
                         <button
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 "
+                            className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
                         >
-                            Toggle Columns
+                            Bulk Actions
+                            <ChevronDownIcon />
                         </button>
                     </Dropdown.Trigger>
-                    <Dropdown.Content align="right" width="48">
-                        {table.getAllLeafColumns().map(column => (
-                            <div key={column.id} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={column.getIsVisible()}
-                                        onChange={column.getToggleVisibilityHandler()}
-                                        className="mr-2"
-                                    />
-                                    {column.id}
-                                </label>
-                            </div>
-                        ))}
+                    <Dropdown.Content align="left" width="48">
+                        <button
+                            onClick={() => isAnyRowSelected && handleBulkAction('delete')}
+                            className={`w-full text-left px-4 py-2 text-sm ${
+                                isAnyRowSelected 
+                                    ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' 
+                                    : 'text-gray-400 cursor-not-allowed'
+                            } flex items-center`}
+                        >
+                            <MdDeleteOutline className="mr-2" /> Delete Selected
+                        </button>
+                        {/* Add more bulk action options here */}
                     </Dropdown.Content>
                 </Dropdown>
+                {toggleableColumns.length > 0 && (
+                    <Dropdown>
+                        <Dropdown.Trigger>
+                            <button
+                                className="bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+                            >
+                                <BsFunnel className="mr-2" />
+                                Toggle Columns
+                                <ChevronDownIcon />
+                            </button>
+                        </Dropdown.Trigger>
+                        <Dropdown.Content align="right" width="48">
+                            {toggleableColumns.map(column => (
+                                <div key={column.id} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={column.getIsVisible()}
+                                            onChange={column.getToggleVisibilityHandler()}
+                                            className="mr-2"
+                                        />
+                                        {column.columnDef.header}
+                                    </label>
+                                </div>
+                            ))}
+                        </Dropdown.Content>
+                    </Dropdown>
+                )}
             </div>
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -123,12 +193,23 @@ export default function TanstackTable({
                             {headerGroup.headers.map((header) => (
                                 <th
                                     key={header.id}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                    onClick={header.column.getToggleSortingHandler()}
                                 >
-                                    {flexRender(
-                                        header.column.columnDef.header,
-                                        header.getContext()
-                                    )}
+                                    <div className="flex items-center">
+                                        {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext()
+                                        )}
+                                        {header.column.getCanSort() && (
+                                            <span className="ml-1">
+                                                {{
+                                                    asc: <SortAscIcon />,
+                                                    desc: <SortDescIcon />,
+                                                }[header.column.getIsSorted()] ?? <SortIcon />}
+                                            </span>
+                                        )}
+                                    </div>
                                 </th>
                             ))}
                         </tr>
