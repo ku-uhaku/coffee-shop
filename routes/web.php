@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -16,7 +17,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return view("pages.admin.index");
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -34,6 +35,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/admin/users/bulk-delete', [UserController::class, 'bulkDeleteUsers'])->name('admin.users.bulkDelete');
     Route::put('/admin/users/{id}/update-status', [UserController::class, 'updateUserStatus'])->name('admin.users.updateStatus');
     Route::delete('/admin/users/{id}', [UserController::class, 'deleteUser'])->name('admin.users.delete');
+
+    // Stores
+    Route::get('/admin/store', [StoreController::class, 'index'])->name('admin.store');
+    Route::post('/admin/store/social-media-links', [StoreController::class, 'updateSocialMediaLinks'])->name('admin.store.updateSocialMediaLinks');
+    Route::get('/store/social-media-links', [StoreController::class, 'getSocialMediaLinks'])->name('admin.store.getSocialMediaLinks');
+    Route::post('/admin/store/gst-info', [StoreController::class, 'updateGstInfo'])->name('admin.store.updateGstInfo');
+
 });
 
 require __DIR__ . '/auth.php';

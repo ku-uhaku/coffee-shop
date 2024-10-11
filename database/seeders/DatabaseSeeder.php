@@ -35,6 +35,10 @@ class DatabaseSeeder extends Seeder
 
         ]);
 
-        User::factory()->count(100)->create();
+        User::factory()->count(10)->create();
+
+        $this->call([
+            StoreSeeder::class,
+        ]);
     }
 }

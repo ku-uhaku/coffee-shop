@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -111,7 +110,9 @@ class UserController extends Controller
         $user->save();
 
         if ($user) {
-            return to_route('admin.users')->with('success', 'User created successfully');
+            return to_route('admin.users')
+                ->with('success', 'User created successfully')
+                ->with('sound', 'create');
         } else {
             return to_route('admin.users')->with('error', 'User created failed');
         }
