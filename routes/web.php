@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/store/social-media-links', [StoreController::class, 'updateSocialMediaLinks'])->name('admin.store.updateSocialMediaLinks');
     Route::get('/store/social-media-links', [StoreController::class, 'getSocialMediaLinks'])->name('admin.store.getSocialMediaLinks');
     Route::post('/admin/store/gst-info', [StoreController::class, 'updateGstInfo'])->name('admin.store.updateGstInfo');
+    Route::delete('/admin/store/gst-info', [StoreController::class, 'deleteGstNumber'])->name('admin.store.deleteGstNumber');
 
 });
 

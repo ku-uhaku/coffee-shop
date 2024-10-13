@@ -2,38 +2,37 @@ import { Dialog } from '@headlessui/react';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import { z } from 'zod';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios';
 import { router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 const gstSchema = z.object({
     name: z.string().min(1, 'GST Name is required'),
-    number: z.string().length(15, 'GST Number must be exactly 15 characters')
-        .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST Number format'),
+    number: z.string().min(1, 'GST Number is required'),
+    showInInvoice: z.boolean().optional()
 });
 
 export default function GstNumberModal({ isOpen, onClose, onAdd }) {
-    const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    const { control, handleSubmit, formState: { errors }, reset } = useForm({
         resolver: zodResolver(gstSchema),
     });
 
-    const onSubmit = async (data) => {
-        try {
-            const response = await axios.post(route('admin.store.updateGstInfo'), {
-                gstsNumbers: [data]
-            });
-            if (response.data.success) {
+    const onSubmit = (data) => {
+        router.post(route('admin.store.updateGstInfo'), {
+            gstInfo: JSON.stringify(data)
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
                 onAdd(data);
                 onClose();
                 reset();
-            } else {
-                console.error('Failed to add GST number');
+            },
+            onError: (errors) => {
+                console.error('Failed to add GST number:', errors);
             }
-        } catch (error) {
-            console.error('Error adding GST number:', error);
-        }
+        });
     };
 
     useEffect(() => {
@@ -51,11 +50,17 @@ export default function GstNumberModal({ isOpen, onClose, onAdd }) {
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <div>
                             <InputLabel htmlFor="name" value="GST Name" />
-                            <TextInput
-                                id="name"
-                                type="text"
-                                {...register('name')}
-                                className="mt-1 block w-full"
+                            <Controller
+                                name="name"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextInput
+                                        id="name"
+                                        type="text"
+                                        {...field}
+                                        className="mt-1 block w-full"
+                                    />
+                                )}
                             />
                             {errors.name && (
                                 <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
@@ -63,15 +68,37 @@ export default function GstNumberModal({ isOpen, onClose, onAdd }) {
                         </div>
                         <div>
                             <InputLabel htmlFor="number" value="GST Number" />
-                            <TextInput
-                                id="number"
-                                type="text"
-                                {...register('number')}
-                                className="mt-1 block w-full"
+                            <Controller
+                                name="number"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextInput
+                                        id="number"
+                                        type="text"
+                                        {...field}
+                                        className="mt-1 block w-full"
+                                    />
+                                )}
                             />
                             {errors.number && (
                                 <p className="text-red-500 text-sm mt-1">{errors.number.message}</p>
                             )}
+                        </div>
+                        <div>
+                            <Controller
+                                name="showInInvoice"
+                                control={control}
+                                render={({ field }) => (
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            {...field}
+                                            className="form-checkbox h-5 w-5 text-blue-600"
+                                        />
+                                        <span className="ml-2 text-gray-700">Show in Invoice</span>
+                                    </label>
+                                )}
+                            />
                         </div>
                         <div className="flex justify-end gap-3">
                             <button

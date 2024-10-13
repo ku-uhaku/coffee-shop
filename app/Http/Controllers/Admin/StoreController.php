@@ -6,15 +6,18 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Store;
+use Illuminate\Support\Facades\Validator;
 
 class StoreController extends Controller
 {
     public function index()
     {
         $store = Store::first();
+        $gstNumbers = json_decode($store->gsts_numbers, true) ?? [];
         
         return Inertia::render('Admin/Store/index', [
             'store' => $store,
+            'gstNumbers' => $gstNumbers,
         ]);
     }
 
@@ -42,16 +45,56 @@ class StoreController extends Controller
         $store = Store::first();
 
         $validated = $request->validate([
-            'name' => 'string',
-            'number' => 'string|size:15|regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
+            'gstInfo' => 'required|json',
         ]);
 
-        $store->gsts_numbers = $request->gstsNumbers;
+        $gstInfo = json_decode($request->gstInfo, true);
+        
+
+        // Validate the decoded JSON data
+        $validator = Validator::make($gstInfo, [
+            'name' => 'required|string',
+            'number' => 'required',
+            'showInInvoice' => 'boolean',
+        ]);
+    
+    
+        if ($validator->fails()) {
+            return to_route('admin.store')->with('error', 'GST information update failed');
+        }
+
+        $existingGstInfo = is_string($store->gsts_numbers) ? json_decode($store->gsts_numbers, true) : [];
+
+        $existingGstInfo[] = $gstInfo;
+
+   
+
+        $store->gsts_numbers = json_encode($existingGstInfo);
+    
         
         if ($store->save()) {
-            return to_route('admin.store')->with('success', 'GST information updated successfully');
+            return to_route('admin.store')->with('success', 'GST information updated successfully')->with('sound', 'create');
         } else {
             return to_route('admin.store')->with('error', 'GST information update failed');
         }
+    }
+
+    public function deleteGstNumber(Request $request)
+    {
+        $store = Store::first();
+        $gstNumbers = json_decode($store->gsts_numbers, true) ?? [];
+
+        $indexToDelete = $request->input('index');
+
+        if (isset($gstNumbers[$indexToDelete])) {
+            array_splice($gstNumbers, $indexToDelete, 1);
+            $store->gsts_numbers = json_encode($gstNumbers);
+
+            if ($store->save()) {
+                return response()->json(['success' => true, 'message' => 'GST number deleted successfully']);
+            }
+        }
+
+        return response()->json(['success' => false, 'message' => 'Failed to delete GST number'], 400);
     }
 }
