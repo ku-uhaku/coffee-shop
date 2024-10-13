@@ -39,7 +39,9 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn() => $request->session()->get('error'),
                 'warning' => fn() => $request->session()->get('warning'),
             ],
-            'sound' => fn() => $request->session()->get('sound'),
+            'sound' => [
+                'create' => fn() => $request->session()->get('sound') == 'create',
+            ]
         ];
     }
 }

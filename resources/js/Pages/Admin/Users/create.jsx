@@ -42,6 +42,7 @@ export default function CreateUsers() {
 
 
 	const {
+		register,
 		control,
 		handleSubmit,
 		formState: { errors, isSubmitting },

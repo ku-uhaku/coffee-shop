@@ -10,22 +10,48 @@ export default function AdminLayout({ header, children }) {
 	const { flash, sound } = usePage().props
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 
+	
 	useEffect(() => {
 		if (flash.success) {
 			toast.success(flash.success)
+			flash.success = null
 		}
 
 		if (flash.error) {
-			toast.error(flash.error)
-		}
-	}, [flash.success, flash.error])
 
+			toast.error(flash.error)
+			flash.error = null
+		}
+		if (flash.warning) {
+			toast.warning(flash.warning)
+			flash.warning = null
+		}
+	
+		
+	}, [flash.success, flash.error, flash.warning])
+	
 	useEffect(() => {
-		if (sound == 'create') {
+		if (sound.create) {
 			const audio = new Audio(change)
 			audio.play()
+			sound.create = null
 		}
+		
 	}, [sound])
+
+	useEffect(() => {
+		if (flash.success || flash.error || flash.warning) {
+			const timer = setTimeout(() => {
+				usePage().props.flash = {
+					success: null,
+					error: null,
+					warning: null
+				};
+			}, 100);
+
+			return () => clearTimeout(timer);
+		}
+	}, [flash]);
 
 	return (
 		<div className="flex min-h-screen bg-gray-100">

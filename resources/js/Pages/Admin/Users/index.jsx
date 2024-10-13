@@ -4,7 +4,7 @@ import { Head, router, usePage } from "@inertiajs/react"
 import TanstackTable from "@/Components/TanstackTable"
 import { toast } from "sonner"
 import Dropdown from "@/Components/Dropdown"
-import { FaChevronDown, FaEdit, FaTrash } from "react-icons/fa"
+import { FaChevronDown, FaEdit, FaTrash, FaUserShield } from "react-icons/fa"
 import change from "../../../../../public/sound/change.mp3"
 import deleteSound from "../../../../../public/sound/delete.mp3"
 import Modal from "@/Components/Modal"
@@ -141,6 +141,15 @@ export default function Index({
 								className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 hover:text-indigo-900"
 							>
 								<FaEdit className="inline mr-2" /> Edit
+							</Dropdown.Link>
+
+							<Dropdown.Link
+								href={route("admin.users.roles", row.original.id)}
+								method="get"
+								as="button"
+								className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 hover:text-indigo-900"
+							>
+								<FaUserShield className="inline mr-2" /> Manage Roles
 							</Dropdown.Link>
 							<button
 								onClick={() => handleDelete(row.original)}

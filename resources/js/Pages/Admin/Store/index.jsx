@@ -15,6 +15,8 @@ import moment from "moment-timezone"
 import GstNumberModal from "./gstNumberModal"
 import Modal from "@/Components/Modal"
 import { TrashIcon } from '@heroicons/react/24/outline'
+import deleteSound from '../../../../../public/sound/delete.mp3'
+import SocialMediaModal from './socialMediaModal';
 
 
 
@@ -23,9 +25,18 @@ const storeSchema = z
 		name: z.string().min(1, "Store name is required"),
 		slug: z.string().min(1, "Slug is required"),
 		description: z.string().min(1, "Description is required"),
-		image: z.instanceof(File).optional(),
-		status: z.enum(["active", "inactive"]),
-		type: z.string().min(1, "Store type is required"),
+		image: z.instanceof(File).refine(
+			(file) => {
+				if (!file) return true;
+				const validTypes = [ 'image/png', 'image/gif', 'image/svg+xml'];
+				return validTypes.includes(file.type);
+			},
+			{
+				message: "Image must be a valid JPG, PNG, GIF, or SVG file",
+			}
+		).optional(),
+		// status: z.enum(["active", "inactive"]),
+		// type: z.string().min(1, "Store type is required"),
 		address: z.string().min(1, "Address is required"),
 		city: z.string().min(1, "City is required"),
 		country: z.string().min(1, "Country is required"),
@@ -34,7 +45,10 @@ const storeSchema = z
 		mobile: z.string().optional().nullable(),
 		email: z.string().email("Invalid email address"),
 		website: z.string().url("Invalid website URL").optional().nullable(),
-		social_media: z.record(z.string().url("Invalid URL")).optional().nullable(),
+		social_media: z.array(z.object({
+			platform: z.string(),
+			url: z.string()
+		})).optional().nullable(),
 		time_zone: z.string().optional().nullable(),
 		currency: z.string().min(1, "Currency is required"),
 		currency_symbol: z.string().min(1, "Currency symbol is required"),
@@ -44,19 +58,27 @@ const storeSchema = z
 		date_format: z.string().default("YYYY-MM-DD"),
 		time_format: z.string().default("HH:mm:ss"),
 		no_of_decimals: z.number().int().min(0).max(4).default(2),
-		gsts_numbers: z.array(z.string()).optional().nullable(),
+		gsts_numbers: z.array(z.object({
+			name: z.string(),
+			number: z.string(),
+			showInInvoice: z.boolean().default(false),
+		})).optional().nullable(),
 	})
 
 	
 
-export default function Store({ store, gstNumbers }) {
+export default function Store({ store, gstNumbers, socialMedia, image }) {
 	const { errors: serverErrors } = usePage().props
 	const [activeTab, setActiveTab] = useState(0)
 	const [isGstModalOpen, setIsGstModalOpen] = useState(false)
 	const [gstList, setGstList] = useState(gstNumbers || [])
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 	const [deleteIndex, setDeleteIndex] = useState(null)
+	const [isSocialMediaModalOpen, setIsSocialMediaModalOpen] = useState(false);
+	const [socialMediaList, setSocialMediaList] = useState(socialMedia || []);
+	const [imagePreview, setImagePreview] = useState(null);
 
+	
 	const {
 		register,
 		control,
@@ -66,11 +88,12 @@ export default function Store({ store, gstNumbers }) {
 	} = useForm({
 		resolver: zodResolver(storeSchema),
 		defaultValues: {
+		
 			name: store?.name ?? '',
 			slug: store?.slug ?? '',
 			description: store?.description ?? '',
-			status: store?.status ?? 'active',
-			type: store?.type ?? '',
+			// status: store?.status ?? 'active',
+			// type: store?.type ?? '',
 			address: store?.address ?? '',
 			city: store?.city ?? '',
 			country: store?.country ?? '',
@@ -79,7 +102,6 @@ export default function Store({ store, gstNumbers }) {
 			mobile: store?.mobile ?? '',
 			email: store?.email ?? '',
 			website: store?.website ?? '',
-			social_media: store?.social_media ?? {},
 			time_zone: store?.time_zone ?? '',
 			currency: store?.currency ?? '',
 			currency_symbol: store?.currency_symbol ?? '',
@@ -92,9 +114,23 @@ export default function Store({ store, gstNumbers }) {
 		},
 	})
     
+	useEffect(() => {
+		if (image) {
+		  const baseURL = window.location.origin;
+
+		  setImagePreview(`${baseURL}/storage/${image}`);
+		}
+	  }, [image]);
 
 	const handleImageChange = (file) => {
 		setValue("image", file)
+		if (file) {
+			const reader = new FileReader();
+			reader.onloadend = () => {
+				setImagePreview(reader.result);
+			};
+			reader.readAsDataURL(file);
+		}
 	}
     
     const timeZones = moment.tz.names();
@@ -116,18 +152,33 @@ export default function Store({ store, gstNumbers }) {
 
 	const confirmDelete = () => {
 		if (deleteIndex !== null) {
-			const updatedList = gstList.filter((_, i) => i !== deleteIndex)
-			setGstList(updatedList)
-			setDeleteModalOpen(false)
-			setDeleteIndex(null)
+			const updatedList = gstList.filter((_, i) => i !== deleteIndex);
+			setGstList(updatedList);
+			setDeleteModalOpen(false);
+			setDeleteIndex(null);
+			playDeleteSound(); // Add this line to play a delete sound
 		}
-	}
+	};
+
+	const playDeleteSound = () => {
+		const audio = new Audio(deleteSound); 
+		audio.play().catch(error => console.error('Error playing delete sound:', error));
+	};
 
 	useEffect(() => {
 		setValue('gsts_numbers', gstList)
 	}, [gstList, setValue])
 
+	const handleAddSocialMedia = (newSocialMedia) => {
+		setSocialMediaList([...socialMediaList, newSocialMedia]);
+	};
+
+	useEffect(() => {
+		setValue('social_media', socialMediaList);
+	}, [socialMediaList, setValue]);
+
 	const onSubmit = async (data) => {
+
 		try {
 			const formData = new FormData()
 			for (const key in data) {
@@ -144,9 +195,11 @@ export default function Store({ store, gstNumbers }) {
 				headers: {
 					"Content-Type": "multipart/form-data",
 				},
+				preserveState: true,
+				preserveScroll: true,
 			})
 		} catch (error) {
-			console.error(error)
+			console.error("Error submitting form:", error)
 		}
 	}
 
@@ -158,13 +211,14 @@ export default function Store({ store, gstNumbers }) {
 					<ServerErrors errors={serverErrors} />
 					<div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
 						<div className="p-6 text-gray-900">
-							<h2 className="mb-4 text-2xl font-semibold">Create Store</h2>
+							<h2 className="mb-4 text-2xl font-semibold">Update Store</h2>
 
 							<form onSubmit={handleSubmit(onSubmit)} className="flex w-full">
 								<div className="w-1/3 pr-4">
 									<div className="mb-4">
-										<ImageDrop onImageChange={handleImageChange} />
+										<ImageDrop onImageChange={handleImageChange} imagePreview={imagePreview} />
 									</div>
+									{errors.image && <p className="mt-1 text-sm text-red-600">{errors.image.message}</p>}
 								</div>
 
 								<div className="w-2/3 pl-4">
@@ -354,6 +408,26 @@ export default function Store({ store, gstNumbers }) {
 												</div>
 
 												<div>
+													<InputLabel htmlFor="slug" value="Slug" />
+													<Controller
+														name="slug"
+														control={control}
+														rules={{
+															required: "Slug is required",
+														}}
+														render={({ field }) => (
+															<TextInput
+																id="slug"
+																type="text"
+																className="mt-1 block w-full"
+																{...field}
+															/>
+														)}
+													/>
+													{errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>}
+												</div>
+
+												<div>
 													<InputLabel htmlFor="description" value="Description" />
 													<Controller
 														name="description"
@@ -373,8 +447,65 @@ export default function Store({ store, gstNumbers }) {
 										</Tab>
 
                                         <Tab label="Social Media">
-                                            
-                                        </Tab>
+											<div className="space-y-6">
+												<div className="flex justify-between items-center">
+													<h3 className="text-lg font-semibold">Social Media</h3>
+													<button
+														type="button"
+														onClick={() => setIsSocialMediaModalOpen(true)}
+														className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-300"
+													>
+														Add Social Media
+													</button>
+												</div>
+												<div className="space-y-4">
+												<Controller
+													name="social_media"
+													control={control}
+													render={({ field }) => (
+														<>
+															{field.value.map((socialMedia, index) => (
+																<div key={index} className="flex items-center space-x-2">
+																	<TextInput
+																		type="text"
+																		value={socialMedia.platform}
+																		onChange={(e) => {
+																			const updatedSocialMedia = [...field.value];
+																			updatedSocialMedia[index].platform = e.target.value;
+																			field.onChange(updatedSocialMedia);
+																		}}
+																		placeholder="Platform"
+																		className="flex-1"
+																	/>
+																	<TextInput
+																		type="text"
+																		value={socialMedia.url}
+																		onChange={(e) => {
+																			const updatedSocialMedia = [...field.value];
+																			updatedSocialMedia[index].url = e.target.value;
+																			field.onChange(updatedSocialMedia);
+																		}}
+																		placeholder="URL"
+																		className="flex-1"
+																	/>
+																	<button
+																		type="button"
+																		onClick={() => {
+																			const updatedSocialMedia = field.value.filter((_, i) => i !== index);
+																			field.onChange(updatedSocialMedia);
+																		}}
+																		className="p-2 text-red-500 hover:text-red-700 transition duration-300"
+																	>
+																		<TrashIcon className="h-5 w-5" />
+																	</button>
+																</div>
+															))}
+														</>
+													)}
+												/>
+												</div>
+											</div>
+										</Tab>
 
 										<Tab label="Settings">
 											<div className="space-y-6">
@@ -446,7 +577,7 @@ export default function Store({ store, gstNumbers }) {
 															)}
 														/>
 														{errors.currency_placement && <p className="mt-1 text-sm text-red-600">{errors.currency_placement.message}</p>}
-													</div>
+													</div>	
 												</div>
 
 												<div className="grid grid-cols-2 gap-4">
@@ -558,47 +689,65 @@ export default function Store({ store, gstNumbers }) {
 														render={({ field }) => (
 															<>
 																{field.value.map((gst, index) => (
-																	<div key={index} className="flex items-center space-x-4">
-																		<div className="flex-1">
-																			<InputLabel htmlFor={`gst-name-${index}`} value={gst.name} />
-																			<TextInput
-																				id={`gst-name-${index}`}
-																				type="text"
-																				value={gst.number}
-																				onChange={(e) => {
-																					const updatedGsts = [...field.value];
-																					updatedGsts[index].number = e.target.value;
-																					field.onChange(updatedGsts);
+																	<div key={index} className="bg-white shadow-sm rounded-lg p-4 mb-4">
+																		<div className="flex justify-between items-start">
+																			<div className="space-y-3 flex-grow mr-4">
+																				<div>
+																					<InputLabel htmlFor={`gst-name-${index}`} value="GST Name" className="text-sm font-medium text-gray-700" />
+																					<TextInput
+																						id={`gst-name-${index}`}
+																						type="text"
+																						value={gst.name}
+																						onChange={(e) => {
+																							const updatedGsts = [...field.value];
+																							updatedGsts[index].name = e.target.value;
+																							field.onChange(updatedGsts);
+																						}}
+																						className="mt-1 block w-full text-sm"
+																					/>
+																				</div>
+																				<div>
+																					<InputLabel htmlFor={`gst-number-${index}`} value="GST Number" className="text-sm font-medium text-gray-700" />
+																					<TextInput
+																						id={`gst-number-${index}`}
+																						type="text"
+																						value={gst.number}
+																						onChange={(e) => {
+																							const updatedGsts = [...field.value];
+																							updatedGsts[index].number = e.target.value;
+																							field.onChange(updatedGsts);
+																						}}
+																						className="mt-1 block w-full text-sm"
+																					/>
+																				</div>
+																				<div className="flex items-center mt-2">
+																					<input
+																						type="checkbox"
+																						id={`gst-show-${index}`}
+																						checked={gst.showInInvoice}
+																						onChange={(e) => {
+																							const updatedGsts = [...field.value];
+																							updatedGsts[index].showInInvoice = e.target.checked;
+																							field.onChange(updatedGsts);
+																						}}
+																						className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+																					/>
+																					<label htmlFor={`gst-show-${index}`} className="ml-2 text-sm text-gray-600">
+																						Show in Invoice
+																					</label>
+																				</div>
+																			</div>
+																			<button
+																				type="button"
+																				onClick={() => {
+																					setDeleteIndex(index);
+																					setDeleteModalOpen(true);
 																				}}
-																				className="mt-1 block w-full"
-																			/>
+																				className="p-1 text-red-500 hover:text-red-700 transition duration-300"
+																			>
+																				<TrashIcon className="h-5 w-5" />
+																			</button>
 																		</div>
-																		<div className="flex items-center">
-																			<input
-																				type="checkbox"
-																				id={`gst-show-${index}`}
-																				checked={gst.showInInvoice}
-																				onChange={(e) => {
-																					const updatedGsts = [...field.value];
-																					updatedGsts[index].showInInvoice = e.target.checked;
-																					field.onChange(updatedGsts);
-																				}}
-																				className="form-checkbox h-5 w-5 text-blue-600"
-																			/>
-																			<label htmlFor={`gst-show-${index}`} className="ml-2 text-sm text-gray-700">
-																				Show in Invoice
-																			</label>
-																		</div>
-																		<button
-																			type="button"
-																			onClick={() => {
-																				const updatedGsts = field.value.filter((_, i) => i !== index);
-																				field.onChange(updatedGsts);
-																			}}
-																			className="p-1 text-red-500 hover:text-red-700 transition duration-300"
-																		>
-																			<TrashIcon className="h-5 w-5" />
-																		</button>
 																	</div>
 																))}
 															</>
@@ -629,6 +778,12 @@ export default function Store({ store, gstNumbers }) {
 				isOpen={isGstModalOpen}
 				onClose={() => setIsGstModalOpen(false)}
 				onAdd={handleAddGst}
+			/>
+
+			<SocialMediaModal
+				isOpen={isSocialMediaModalOpen}
+				onClose={() => setIsSocialMediaModalOpen(false)}
+				onAdd={handleAddSocialMedia}
 			/>
 
 			<Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>

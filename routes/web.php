@@ -36,13 +36,19 @@ Route::middleware('auth')->group(function () {
     Route::put('/admin/users/{id}/update-status', [UserController::class, 'updateUserStatus'])->name('admin.users.updateStatus');
     Route::delete('/admin/users/{id}', [UserController::class, 'deleteUser'])->name('admin.users.delete');
 
+    // Permissions
+    Route::get('/admin/permissions', [PermissionController::class, 'index'])->name('admin.permissions');
+
+
+    Route::get('/admin/users/{id}/roles', [UserController::class, 'manageUserRoles'])->name('admin.users.roles');
+
     // Stores
     Route::get('/admin/store', [StoreController::class, 'index'])->name('admin.store');
-    Route::post('/admin/store/social-media-links', [StoreController::class, 'updateSocialMediaLinks'])->name('admin.store.updateSocialMediaLinks');
-    Route::get('/store/social-media-links', [StoreController::class, 'getSocialMediaLinks'])->name('admin.store.getSocialMediaLinks');
-    Route::post('/admin/store/gst-info', [StoreController::class, 'updateGstInfo'])->name('admin.store.updateGstInfo');
-    Route::delete('/admin/store/gst-info', [StoreController::class, 'deleteGstNumber'])->name('admin.store.deleteGstNumber');
 
+    Route::post('/admin/store/gst-info', [StoreController::class, 'updateGstInfo'])->name('admin.store.updateGstInfo');
+
+    Route::post('/admin/store/social-media', [StoreController::class, 'updateSocialMedia'])->name('admin.store.updateSocialMedia');
+    Route::post('/admin/store/update', [StoreController::class, 'update'])->name('admin.store.update');
 });
 
 require __DIR__ . '/auth.php';

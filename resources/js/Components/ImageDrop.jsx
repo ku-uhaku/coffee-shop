@@ -1,7 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-export default function ImageDrop({ onImageChange }) {
+export default function ImageDrop({ onImageChange, imagePreview }) {
     const [previewImage, setPreviewImage] = useState(null);
+    useEffect(() => {
+        setPreviewImage(imagePreview);
+    }, [imagePreview]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
 

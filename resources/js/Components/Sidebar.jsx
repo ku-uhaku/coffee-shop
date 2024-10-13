@@ -50,7 +50,7 @@ export default function Sidebar({ isOpen }) {
     const { url } = usePage();
 
     const isActive = (path) => url.startsWith(path);
-    console.log(isActive);
+
 
     const shouldOpenAccordion = (item) => {
         return item.children && item.children.some(child => isActive(route(child.route)));
